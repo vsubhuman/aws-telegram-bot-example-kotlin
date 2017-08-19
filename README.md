@@ -40,7 +40,7 @@ You may manage roles in the [IAM console](https://console.aws.amazon.com/iam/hom
 Handler points to the class that implements the lambda interface
 and that will be used as the entry point.
 
-### Create
+### Create lambda
 
 When all parameters are set you may call commands:
 ```
@@ -53,7 +53,7 @@ gradle install_lambda_production
 These commands will attempt to create a new lambda with either
 test or production name respectively, and to deploy current code.
 
-### Update
+### Update lambda
 
 After you already got an existing lambda and you just want to update
 its code, call:
