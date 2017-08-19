@@ -1,0 +1,97 @@
+import com.amazonaws.services.lambda.model.Runtime
+import jp.classmethod.aws.gradle.lambda.AWSLambdaUpdateFunctionCodeTask
+import jp.classmethod.aws.gradle.lambda.AWSLambdaCreateFunctionTask
+
+buildscript {
+    ext.kotlin_version = '1.1.4-2'
+
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+plugins {
+    id 'jp.classmethod.aws.lambda' version '0.35'
+}
+
+apply plugin: 'kotlin'
+
+group 'com.vsubhuman'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+def fuel_version = '1.9.0'
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile 'com.amazonaws:aws-lambda-java-core:1.1.0'
+    compile 'com.fasterxml.jackson.module:jackson-module-kotlin:2.9.0'
+    compile "com.github.kittinunf.fuel:fuel:${fuel_version}"
+    compile "com.github.kittinunf.fuel:fuel-gson:${fuel_version}"
+}
+
+task writeVersion() << {
+    def file = new File("$projectDir/src/main/resources/version")
+    file.createNewFile()
+    file.text = "${version}"
+}
+processResources.dependsOn writeVersion
+
+jar {
+    // uberjar
+    from(configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }) {
+        exclude "META-INF/*.SF"
+        exclude "META-INF/*.DSA"
+        exclude "META-INF/*.RSA"
+    }
+}
+
+aws {
+    profileName = 'default'
+}
+
+lambda {
+    region = "us-west-2"
+}
+
+def lambda_name_test = "MyBotTestLambdaName"
+def lambda_name_production = "MyBotProductionLambdaName"
+def lambda_role = "arn:aws:iam::${aws.accountId}:role/lambda-role"
+def lambda_handler = "com.vsubhuman.telegram.kt_example.Main"
+
+task deploy(type: AWSLambdaUpdateFunctionCodeTask, dependsOn: build) {
+    functionName = lambda_name_test
+    zipFile = jar.archivePath
+}
+
+task deploy_production(type: AWSLambdaUpdateFunctionCodeTask, dependsOn: build) {
+    functionName = lambda_name_production
+    zipFile = jar.archivePath
+}
+
+task install_lambda(type: AWSLambdaCreateFunctionTask, dependsOn: build) {
+    functionName = lambda_name_test
+    handler = lambda_handler
+    zipFile = jar.archivePath
+    runtime = Runtime.Java8
+    role = lambda_role
+    timeout = 60
+    memorySize = 256
+}
+
+task install_lambda_production(type: AWSLambdaCreateFunctionTask, dependsOn: build) {
+    functionName = lambda_name_production
+    handler = lambda_handler
+    zipFile = jar.archivePath
+    runtime = Runtime.Java8
+    role = lambda_role
+    timeout = 300
+    memorySize = 512
+}
